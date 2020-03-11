@@ -12,11 +12,14 @@ def proof_of_work(block):
     # Stringify the block and look for a proof.
     block_string = json.dumps(block, sort_keys=True)
     proof = 0
+    print('Currently mining! Stand by...')
+
     # Loop through possibilities, checking each one against `valid_proof`
     # in an effort to find a number that is a valid proof
     while valid_proof(block_string, proof) is False:
         proof += 1
     # :return: A valid proof for the provided block
+    print('Mining complete!!!')
     return proof
 
 
@@ -50,6 +53,8 @@ if __name__ == '__main__':
     print("ID is", id)
     f.close()
 
+    coins_mined = 0
+
     # Run forever until interrupted
     while True:
         r = requests.get(url=node + "/last_block")
@@ -73,5 +78,10 @@ if __name__ == '__main__':
 
         # TODO: If the server responds with a 'message' 'New Block Forged'
         # add 1 to the number of coins mined and print it.  Otherwise,
+        # Add any coins granted to a simple integer total, and print the amount of coins the client has earned
+        if data["message"] == "Forged a New Block":
+            coins_mined += 1
+            print(f"Coins Mined: {coins_mined}")
         # print the message from the server.
-        pass
+        else:
+            print(data["message"])
