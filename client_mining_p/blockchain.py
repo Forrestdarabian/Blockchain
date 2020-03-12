@@ -1,5 +1,3 @@
-# Paste your version of blockchain.py from the basic_block_gp
-# folder here
 import hashlib
 import json
 from time import time
@@ -33,7 +31,6 @@ class Blockchain(object):
         """
 
         block = {
-            # TODO
             'index': len(self.chain) + 1,
             'timestamp': time(),
             'transactions': self.current_transactions,
@@ -84,10 +81,26 @@ class Blockchain(object):
     def last_block(self):
         return self.chain[-1]
 
+    # def proof_of_work(self, block):
+    #     """
+    #     Simple Proof of Work Algorithm
+    #     Stringify the block and look for a proof.
+    #     Loop through possibilities, checking each one against `valid_proof`
+    #     in an effort to find a number that is a valid proof
+    #     :return: A valid proof for the provided block
+    #     """
+    #     block_string = json.dumps(block, sort_keys=True)
+
+    #     proof = 0
+    #     while self.valid_proof(block_string, proof) is False:
+    #         proof += 1
+
+    #     return proof
+
     @staticmethod
     def valid_proof(block_string, proof):
         """
-        Validates the Proof:  Does hash(block_string, proof) contain 3
+        Validates the Proof:  Does hash(block_string + proof) contain 3
         leading zeroes?  Return true if the proof is valid
         :param block_string: <string> The stringified block to use to
         check in combination with `proof`
@@ -96,11 +109,11 @@ class Blockchain(object):
         correct number of leading zeroes.
         :return: True if the resulting hash is a valid proof, False otherwise
         """
-        # TODO
+
         guess = f'{block_string}{proof}'.encode()
         guess_hash = hashlib.sha256(guess).hexdigest()
-        return guess_hash[:6] == "000000"
-        # return True or False
+
+        return guess_hash[:3] == "000"
 
 
 # Instantiate our Node
@@ -115,27 +128,32 @@ blockchain = Blockchain()
 
 @app.route('/mine', methods=['POST'])
 def mine():
-    # Use `data = request.get_json()` to pull the data out of the POST
-    data = request.get_json()
-    # Check that 'proof', and 'id' are present
+    values = request.get_json()
+
     required = ['proof', 'id']
-    # Return a 400 error using `jsonify(response)` with a 'message'
-    if not data['proof'] and data['id']:
-        response = {'message': 'There are values missing...'}
+    if not all(k in values for k in required):
+        response = {'message': 'Missing values!'}
         return jsonify(response), 400
 
-    # A valid proof should fail for all senders except the first.
-    sub_proof = data.get('proof')
-    new_block = blockchain.last_block
-    last_block_string = json.dumps(new_block, sort_keys=True)
+    submitted_proof = values['proof']
 
-    # Return a message indicating success or failure.
-    if blockchain.valid_proof(last_block_string, sub_proof):
-        response = {'message': "New Block Forged"}
+    block_string = json.dumps(blockchain.last_block, sort_keys=True)
+    if blockchain.valid_proof(block_string, submitted_proof):
+
+        # Forge the new Block by adding it to the chain with the proof
+        previous_hash = blockchain.hash(blockchain.last_block)
+        block = blockchain.new_block(submitted_proof, previous_hash)
+
+        response = {
+            'new_block': block
+        }
+
         return jsonify(response), 200
     else:
-        response = {'message': "Proof Not Valid"}
-        return jsonify(response), 400
+        response = {
+            'message': 'Proof was invalid or late'
+        }
+    return jsonify(response), 200
 
 
 @app.route('/chain', methods=['GET'])
@@ -147,11 +165,13 @@ def full_chain():
     }
     return jsonify(response), 200
 
-#  Add an endpoint called `last_block` that returns the last block in the chain
+
+# Add an endpoint called `last_block` that returns the
+# last block in the chain
 @app.route('/last_block', methods=['GET'])
-def last_block():
+def return_last_block():
     response = {
-        'last_block': blockchain.last_block
+        'last_block': blockchain.last_block,
     }
     return jsonify(response), 200
 

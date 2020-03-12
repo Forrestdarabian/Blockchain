@@ -12,14 +12,9 @@ def proof_of_work(block):
     # Stringify the block and look for a proof.
     block_string = json.dumps(block, sort_keys=True)
     proof = 0
-    print('Currently mining! Stand by...')
-
-    # Loop through possibilities, checking each one against `valid_proof`
-    # in an effort to find a number that is a valid proof
     while valid_proof(block_string, proof) is False:
         proof += 1
-    # :return: A valid proof for the provided block
-    print('Mining complete!!!')
+
     return proof
 
 
@@ -54,6 +49,7 @@ if __name__ == '__main__':
     f.close()
 
     coins_mined = 0
+    print("Starting mining! Stand by...")
 
     # Run forever until interrupted
     while True:
@@ -68,20 +64,32 @@ if __name__ == '__main__':
             break
 
         # TODO: Get the block from `data` and use it to look for a new proof
-        new_proof = proof_of_work(data.get('last_block'))
+        block = data['last_block']
+
+        new_proof = proof_of_work(block)
+        print(f"Proof found: {new_proof}")
 
         # When found, POST it to the server {"proof": new_proof, "id": id}
         post_data = {"proof": new_proof, "id": id}
 
         r = requests.post(url=node + "/mine", json=post_data)
-        data = r.json()
+        try:
+            data = r.json()
+        except ValueError:
+            print("Error: Non-json response")
+            print("Response returned:")
+            print(r)
+            break
 
+        # data = r.json()
+
+        # print(data['message'])
         # TODO: If the server responds with a 'message' 'New Block Forged'
         # add 1 to the number of coins mined and print it.  Otherwise,
         # Add any coins granted to a simple integer total, and print the amount of coins the client has earned
-        if data["message"] == "Forged a New Block":
-            coins_mined += 1
-            print(f"Coins Mined: {coins_mined}")
-        # print the message from the server.
-        else:
-            print(data["message"])
+        # if data["message"] == "New Block Forged":
+        #     coins_mined += 1
+        #     print(f"Coins Mined: {coins_mined}")
+        # # print the message from the server.
+        # else:
+        #     print(data["message"])
